@@ -226,11 +226,10 @@ server.on('message', (pkt, rinfo) => {
 //   user.insert({name: items.id, zone: items.zones[0].name}); 
 });
 
-// Uncomment for server to listen for HTTP requests
 
-// server.on('listening', () => {
-//   const address = server.address();
-//   console.log(`server listening ${address.address}:${address.port}`);
-// });
+server.on('listening', () => {
+  const address = server.address();
+  console.log(`server listening ${address.address}:${address.port}`);
+});
 
-// server.bind(3001);
+server.bind(3001);
