@@ -50,14 +50,15 @@ app.get('/workers', function(req, res) {
     res.sendFile(path.join(__dirname, '../src/views/index.html'));
 });
 
+//Uncomment to listen to HTTP Requests
 
-app.listen(port, function(err) {
-    if (err) {
-        console.log(err);
-    } else {
-        open('http://localhost:' + port);
-    }
-});
+// app.listen(port, function(err) {
+//     if (err) {
+//         console.log(err);
+//     } else {
+//         open('http://localhost:' + port);
+//     }
+// });
 
 const dgram = require('dgram');
 const server = dgram.createSocket('udp4');
