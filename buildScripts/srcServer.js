@@ -52,13 +52,13 @@ app.get('/workers', function(req, res) {
 
 //Uncomment to listen to HTTP Requests
 
-// app.listen(port, function(err) {
-//     if (err) {
-//         console.log(err);
-//     } else {
-//         open('http://localhost:' + port);
-//     }
-// });
+app.listen(port, function(err) {
+    if (err) {
+        console.log(err);
+    } else {
+        open('http://localhost:' + port);
+    }
+});
 
 const dgram = require('dgram');
 const server = dgram.createSocket('udp4');
