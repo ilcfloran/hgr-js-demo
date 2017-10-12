@@ -3,8 +3,9 @@ import path from 'path';
 import open from 'open';
 import webpack from 'webpack';
 import config from '../webpack.config.dev';
-var db = require("./db");
-
+var db = require("../db");
+var tagRepo = require("../tag-repo");
+var dateFormat = require('dateformat');
 
 //const db = require('node-localdb');
 //const user = db('C:/TagDB/tag.json')
@@ -12,8 +13,12 @@ const port = 3000;
 const app = express();
 const compiler = webpack(config);
 //var cache = require('./cache');
+app.use(express.static('public'));
+const controllers = require("../controllers");
 const NodeCache = require("node-cache");
 const tagCache = new NodeCache();
+
+controllers.init(app, tagRepo);
 
 app.set("view engine", "vash");
 //var knex = require("knex")(cfg);
@@ -37,10 +42,7 @@ app.use(require('webpack-dev-middleware')(compiler, {
 
 app.use(express.static('src/views'));
 
-app.get('/', function(req, res) {
-    //res.sendFile(path.join(__dirname, '../src/views/index.html'));
-    res.render("index", {title: "Tags Home Page"});
-});
+
 
 app.get('/workers', function(req, res) {
 
@@ -70,50 +72,106 @@ function isEmptyObject(obj) {
 }
 
 server.on('message', (pkt, rinfo) => {
-  console.log(`server got: ${pkt} from ${rinfo.address}:${rinfo.port}`);
+  //console.log(`server got: ${pkt} from ${rinfo.address}:${rinfo.port}`);
   var items = JSON.parse(pkt);
   
   //console.log(items);
-  var zones = ["zone1", "zone2"];
-  //const tags = {};
+  var zones = ["Zone001", "Zone002"];
+  const tags = {};
   
-  if(items !== null && items !== '') {
+  if(items !== null && items !== '' && items.zones.length > 0) {
     
+    var tagKey = items.id;
     //console.log("All tags in memory is => "+ cache.getAll().length);    
-    var tagInMemory = tagCache.get(items['tag-id']);
-    //console.log("tag in memory is => "+ tagInMemory);
+    var tagInMemory = tagCache.get(tagKey);
+    //console.log(tagCache.get(tagKey));
+    //console.log("tag in memory is => "+ JSON.stringify(tagInMemory));
    
-    var tst = (tagInMemory === undefined) ? "undefined" : tagInMemory.zone;
-    console.log(tst);
-    console.log(items.zone);
+    //var tst = (tagInMemory === undefined) ? "undefined" : tagInMemory.zones[0].name;
+    console.log("Tag zone is: ...........");
+    
+    //check if zone is undefined
+    //console.log(items.zones[0].name);
+
+    console.log("Tag key is: " + tagKey);
+
+    // if(items.zones.length > 0)
+    // {
+        
+    // }
 
     if( tagInMemory === undefined){
-        //console.log(tags);
-        var tagKey = items['tag-id'];
-        //console.log(tagKey);
         tagCache.set(tagKey, items);
-        console.log("ALLLLLLLLLLLLLLLLLLLLLLL");
-        console.log(tagCache.get(''));
-
-    }else if(tagInMemory.zone != items.zone)
+    }else if(tagInMemory.zones[0].name != items.zones[0].name)
     {
+        console.log("Tag in memory zone is: ...........");
+        console.log(tagInMemory.zones[0].name);
         //console.log("*************Entered Else block*************");
-        switch(tagInMemory.zone){
-            case 'zone1':
+        switch(tagInMemory.zones[0].name){
+            case 'Zone001':
                 console.log("Worker entered the area");
                 //Update database to change tags zone to zone2
-                var tmpTag = tagCache.get(items['tag-id']);
-                tmpTag.zone = 'zone2';
-                tagCache.set(items['tag-id'], tmpTag);
+                var tmpTag = tagCache.get(tagKey);
+                tmpTag.zones[0].name = 'Zone002';
+                tagCache.set(tagKey, tmpTag);
+
+                //add object mapper later
+                var now = new Date();
+                var dbTag = 
+                {
+                    'tag-id': tmpTag.id,
+                    'zone': tmpTag.zones[0].name,
+                    'prev-zone': 'Zone001',
+                    'time': dateFormat(now, "yyyy-mm-dd'T'HH:MM:ss")
+                };
+
+                tagRepo.saveTag(dbTag).then(function(result){
+                    console.log(result);
+                }).catch(function(err){
+                    console.log(err);
+                });
+                
+                // .finally(function(){
+                //     db.destroy();
+                // });
                 break;
-            case 'zone2':
+            case 'Zone002':
                 console.log("Worker exited the area");
                 //Update database to change tags zone to zone1
                 //console.log(cache.get)
                 //tags[items['tag-id']]
+                
+                var tmpTag = tagCache.get(tagKey);
+                tagCache.del(tagKey);
+
+                //Persistence operation
+                var now = new Date();
+                var dbTag = {};
+                tagRepo.getTag(tagKey).then(function(result){
+                    dbTag = result;
+                }).catch(function(err){
+                    console.log(err);
+                });
+
+                dbTag['zone'] = 'Zone001';
+                dbTag['time'] = dateFormat(now, "yyyy-mm-dd'T'HH:MM:ss");
+                dbTag['prev-zone'] = tmpTag.zones[0].name;
+                
+                tagRepo.updateTag(tagKey, dbTag).then(function(result){
+                    console.log(result);
+                }).catch(function(err){
+                    console.log(err);
+                });
+                
+                // .finally(function(){
+                //     db.destroy();
+                // });
+                
                 break;
         }
     }
+
+
 
     //console.log("Packet received #####################");
     //console.log(tags[items["tag-id"]]);
@@ -168,9 +226,11 @@ server.on('message', (pkt, rinfo) => {
 //   user.insert({name: items.id, zone: items.zones[0].name}); 
 });
 
-server.on('listening', () => {
-  const address = server.address();
-  console.log(`server listening ${address.address}:${address.port}`);
-});
+// Uncomment for server to listen for HTTP requests
 
-server.bind(3001);
+// server.on('listening', () => {
+//   const address = server.address();
+//   console.log(`server listening ${address.address}:${address.port}`);
+// });
+
+// server.bind(3001);

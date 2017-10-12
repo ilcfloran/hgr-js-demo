@@ -1,13 +1,24 @@
 "use strict";
 
+// var cfg = 
+// {
+//     dialect: 'mssql',
+//     connection: {
+//         host: 'localhost',
+//         database: 'HegreTest',
+//         user: 'komail',
+//         password: '123456',
+//     }
+// };
+
 var cfg = 
 {
-    dialect: 'mssql',
+    dialect: 'mysql',
     connection: {
         host: 'localhost',
-        database: 'HegreTest',
-        user: 'komail',
-        password: '123456',
+        database: 'hegre',
+        user: 'root',
+        password: 'admin',
     }
 };
 
